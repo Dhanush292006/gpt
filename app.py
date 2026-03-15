@@ -1,10 +1,14 @@
 import streamlit as st
 import pandas as pd
-from langchain_community.llms import Ollama
+from transformers import pipeline
 from textblob import TextBlob
 
-# Load LLM
-llm = Ollama(model="llama3")
+# Load HuggingFace model
+generator = pipeline(
+    "text-generation",
+    model="tiiuae/falcon-7b-instruct",
+    max_length=512
+)
 
 st.title("📚 ClassGPT AI Assistant")
 
@@ -12,20 +16,20 @@ st.title("📚 ClassGPT AI Assistant")
 if "history" not in st.session_state:
     st.session_state.history = []
 
-# spelling correction function
+# spelling correction
 def correct_text(text):
     words = text.split()
     corrected = []
-    
+
     for w in words:
-        if len(w) > 6:   # assume long words may be names
+        if len(w) > 6:
             corrected.append(w)
         else:
             corrected.append(str(TextBlob(w).correct()))
-    
+
     return " ".join(corrected)
 
-# Upload files
+# Upload file
 uploaded_file = st.file_uploader(
     "Upload CSV / Excel / TXT",
     type=["csv","xlsx","txt"]
@@ -51,8 +55,6 @@ if uploaded_file is not None:
 # Ask question
 user_question = st.text_input("Ask your question")
 
-
-
 if user_question:
 
     corrected = correct_text(user_question)
@@ -65,11 +67,11 @@ if user_question:
     Question: {corrected}
     """
 
-    response = llm.invoke(prompt)
+    response = generator(prompt)[0]["generated_text"]
 
-    st.session_state.history.append((corrected,response))
+    st.session_state.history.append((corrected, response))
 
-# Show chat history
+# Show history
 for q,a in st.session_state.history:
     st.write("🧑:",q)
     st.write("🤖:",a)
